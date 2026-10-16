@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Taka Task</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@600;700;800&family=Hind+Siliguri:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: one-column phone app. A single green balance panel is the bold element; tasks are plain list rows; bottom tab bar switches Home / Wallet / Owner calculator. */
+:root{
+  --bg:#EDF2EC; --surface:#FFFFFF; --surface-2:#E1EAE2; --ink:#10231A; --ink-2:#4B6054; --line:#CFDBD1;
+  --primary:#0B6B4A; --on-primary:#FFFFFF; --coin:#F5B521; --on-coin:#2E2100; --good:#17803F; --bad:#C23333;
+  --font-display:"Baloo Da 2","Hind Siliguri",system-ui,sans-serif;
+  --font-body:"Hind Siliguri",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0A1410; --surface:#12201A; --surface-2:#1B2D25; --ink:#E8F2EB; --ink-2:#9CB2A5; --line:#26392F;
+    --primary:#3CC890; --on-primary:#04201A; --coin:#F5B521; --on-coin:#2E2100; --good:#4CD18A; --bad:#FF8080;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0A1410; --surface:#12201A; --surface-2:#1B2D25; --ink:#E8F2EB; --ink-2:#9CB2A5; --line:#26392F;
+  --primary:#3CC890; --on-primary:#04201A; --coin:#F5B521; --on-coin:#2E2100; --good:#4CD18A; --bad:#FF8080;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--font-body); font-size:16px; line-height:1.5;
+  margin:0; padding-block:16px 104px;
+  padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+#app{max-width:480px;margin:0 auto}
+h1,h2{margin:0;font-weight:700}
+h1{font-family:var(--font-display);font-weight:800;font-size:26px;line-height:1.2;text-wrap:balance}
+.label{font-size:13px;letter-spacing:.04em;color:var(--ink-2);font-weight:600;margin:26px 0 8px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.pill{border:1px solid var(--line);border-radius:99px;padding:2px 10px;font-size:12px;color:var(--ink-2);white-space:nowrap}
+.note{font-size:13px;color:var(--ink-2);margin:18px 0 0}
+
+.btn{font:inherit;font-weight:600;border:0;border-radius:14px;padding:11px 18px;min-height:48px;cursor:pointer;background:var(--primary);color:var(--on-primary)}
+.btn.coin{background:var(--coin);color:var(--on-coin)}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn.full{width:100%}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--coin);outline-offset:2px}
+
+.bal{background:var(--primary);color:var(--on-primary);border-radius:24px;padding:20px 20px 18px;display:grid;gap:6px}
+.bal .k{font-size:14px;opacity:.9}
+.bal .num{font-family:var(--font-display);font-weight:800;font-size:clamp(44px,14vw,60px);line-height:1;display:flex;align-items:center;gap:10px;font-variant-numeric:tabular-nums}
+.bal .sub{font-size:14px;opacity:.92}
+.bal .row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:14px}
+
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{border-radius:12px;background:var(--surface-2);padding:8px 0;text-align:center;font-size:12px;color:var(--ink-2);display:grid;gap:2px;min-width:0}
+.day b{font-family:var(--font-display);font-size:16px;color:var(--ink);font-weight:700}
+.day.done{background:var(--primary);color:var(--on-primary)}
+.day.done b{color:inherit}
+.day.today{background:var(--surface);outline:2px solid var(--coin)}
+
+.task{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:14px 0;font:inherit;color:inherit;cursor:pointer;min-height:68px}
+.task .ic{width:44px;height:44px;border-radius:14px;background:var(--surface-2);display:grid;place-items:center;color:var(--primary)}
+.task .t{font-weight:600}
+.task .s{font-size:13px;color:var(--ink-2)}
+.task[disabled]{opacity:.55;cursor:not-allowed}
+.chip{background:var(--coin);color:var(--on-coin);border-radius:99px;padding:3px 10px;font-weight:700;font-size:13px;white-space:nowrap;font-family:var(--font-display)}
+
+.sub-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.sub-head .btn{min-height:40px;padding:6px 14px}
+.bar{height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--primary);width:0;transition:width .3s}
+.meta{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-2);margin-bottom:8px}
+.q{font-family:var(--font-display);font-weight:700;font-size:22px;line-height:1.3;margin:16px 0;text-wrap:balance}
+.opt{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:13px 16px;min-height:52px;margin-bottom:10px;cursor:pointer}
+.opt.right{border-color:var(--good);border-width:2px}
+.opt.wrong{border-color:var(--bad);border-width:2px}
+.opt .m{font-size:13px;font-weight:600}
+.opt.right .m{color:var(--good)}
+.opt.wrong .m{color:var(--bad)}
+.fb{font-weight:600;margin:6px 0 12px}
+.fb.good{color:var(--good)}
+.fb.bad{color:var(--bad)}
+.result{text-align:center;padding:24px 0}
+.result .big{font-family:var(--font-display);font-weight:800;font-size:44px;line-height:1.1;margin:8px 0}
+
+.mexp{font-family:var(--font-display);font-weight:800;font-size:48px;text-align:center;margin:20px 0 14px;font-variant-numeric:tabular-nums}
+.ans{font:inherit;font-family:var(--font-display);font-weight:700;font-size:28px;text-align:center;width:100%;padding:12px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);min-height:56px;margin-bottom:12px}
+
+.adslot{aspect-ratio:6/5;max-width:100%;border:2px dashed var(--line);border-radius:16px;display:grid;place-items:center;text-align:center;padding:16px;color:var(--ink-2);background:var(--surface)}
+.adslot b{display:block;color:var(--ink);font-size:17px;margin-bottom:4px}
+.adtag{font-size:12px;border:1px solid var(--line);border-radius:6px;padding:0 6px;color:var(--ink-2)}
+.adbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0}
+.ring{position:relative;width:64px;height:64px;flex:none}
+.ring svg{width:64px;height:64px;transform:rotate(-90deg)}
+.ring span{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--font-display);font-weight:800;font-size:24px}
+
+.board{position:relative;width:min(100%,360px);margin:0 auto;aspect-ratio:1}
+#s-canvas{display:block;width:100%;height:100%;border-radius:16px;touch-action:none}
+.ov{position:absolute;inset:0;display:grid;place-items:center;padding:16px}
+.ov .panel{background:var(--surface);border:1.5px solid var(--line);border-radius:18px;padding:18px;text-align:center;display:grid;gap:10px;max-width:100%}
+.pad{display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(2,56px);gap:8px;justify-content:center;margin-top:16px}
+.pad .btn{padding:0;font-size:22px;min-height:0}
+.pad .up{grid-column:2;grid-row:1}
+.pad .lf{grid-column:1;grid-row:2}
+.pad .dn{grid-column:2;grid-row:2}
+.pad .rt{grid-column:3;grid-row:2}
+
+.wal{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px;display:grid;gap:8px}
+.wal .k{font-size:14px;color:var(--ink-2)}
+.tkbig{font-family:var(--font-display);font-weight:800;font-size:48px;line-height:1.1;font-variant-numeric:tabular-nums}
+.field{display:grid;gap:6px;margin-bottom:14px}
+.field label{font-weight:600;font-size:14px}
+input,select{font:inherit;padding:11px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);min-height:48px;width:100%}
+input[type=range]{padding:0;min-height:32px;accent-color:var(--primary)}
+.hint{font-size:13px;color:var(--ink-2)}
+.err{color:var(--bad);font-weight:600;min-height:1.5em;margin:0 0 10px}
+.err.ok{color:var(--good)}
+.list{list-style:none;padding:0;margin:0}
+.list li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.list .a{font-family:var(--font-display);font-weight:700;white-space:nowrap}
+.list .d{font-size:13px;color:var(--ink-2)}
+.empty{color:var(--ink-2);font-size:14px;padding:8px 0}
+.tag{font-size:12px;border:1px solid var(--line);border-radius:99px;padding:1px 8px;color:var(--ink-2);white-space:nowrap}
+.res{display:grid;gap:0;margin:0}
+.res div{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.res dt{color:var(--ink-2)}
+.res dd{margin:0;font-family:var(--font-display);font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.res .neg{color:var(--bad)}
+
+#tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding:6px max(16px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+#tabs .in{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.tab{background:none;border:0;color:var(--ink-2);font:inherit;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;border-radius:12px;min-height:54px;cursor:pointer}
+.tab[aria-current="page"]{color:var(--primary);font-weight:600;background:var(--surface-2)}
+#toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translate(-50%,12px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:30;max-width:calc(100% - 32px);text-align:center}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+.bar.mini{display:block;margin-top:6px}
+#ix{position:fixed;inset:0;z-index:40;background:var(--bg);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.ix-in{width:100%;max-width:480px;display:grid;gap:14px}
+.ix-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+@media (prefers-reduced-motion:reduce){.bar>i,#toast{transition:none}}
+</style><style>[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<div id="app">
+  <section id="v-home" class="view">
+    <header class="top"><h1>Taka Task</h1><span class="pill">ডেমো সংস্করণ</span></header>
+    <div class="bal">
+      <div class="k">আপনার পয়েন্ট</div>
+      <div class="num">
+        <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="19" fill="var(--coin)"/><circle cx="20" cy="20" r="13" fill="none" stroke="var(--on-coin)" stroke-opacity=".45" stroke-width="2"/></svg>
+        <span id="h-pts">0</span>
+      </div>
+      <div class="sub"><span id="h-tk"></span> · ১০০ পয়েন্ট = ১ টাকা</div>
+      <div class="row"><span id="h-today"></span><button class="btn coin" data-go="wallet">টাকা তুলুন</button></div>
+    </div>
+    <h2 class="label">দৈনিক বোনাস</h2>
+    <div class="days" id="days"></div>
+    <button class="btn full" id="claim" style="margin-top:10px"></button>
+    <h2 class="label">আজকের কাজ</h2>
+    <div id="tasks"></div>
+    <p class="note">এটি প্রোটোটাইপ। বিজ্ঞাপন, পয়েন্ট ও টাকা তোলা সবই ডেমো, কোনো আসল টাকা লেনদেন হয় না। অ্যাপ খোলা, কাজে ঢোকা ও বের হওয়া এবং বোনাস নেওয়ার সময় বিজ্ঞাপন আসে।</p>
+  </section>
+
+  <section id="v-wallet" class="view" hidden>
+    <header class="top"><h1>ওয়ালেট</h1></header>
+    <div class="wal">
+      <div class="k">আপনার ব্যালেন্স</div>
+      <div class="tkbig" id="w-tk"></div>
+      <div class="hint"><span id="w-pts"></span> পয়েন্ট · <span id="w-demo">ডেমো ব্যালেন্স দিয়ে শুরু</span></div>
+      <div class="bar"><i id="w-bar"></i></div>
+      <div class="hint" id="w-hint"></div>
+    </div>
+    <h2 class="label">টাকা তোলার অনুরোধ</h2>
+    <form id="w-form" novalidate>
+      <div class="field"><label for="w-method">কোথায় নিবেন</label>
+        <select id="w-method"><option>bKash</option><option>Nagad</option></select></div>
+      <div class="field"><label for="w-num">মোবাইল নম্বর</label>
+        <input id="w-num" type="tel" inputmode="numeric" autocomplete="off" placeholder="০১৭XXXXXXXX"></div>
+      <div class="field"><label for="w-amt">কত টাকা (সর্বনিম্ন ৳৫০, সর্বোচ্চ ৳২০০)</label>
+        <input id="w-amt" type="number" inputmode="numeric" min="50" max="200" step="1" value="50"></div>
+      <p class="err" id="w-msg" role="alert"></p>
+      <button class="btn full" type="submit">অনুরোধ পাঠান</button>
+    </form>
+    <h2 class="label">তোলার অনুরোধ</h2>
+    <ul class="list" id="w-req"></ul>
+    <h2 class="label">সাম্প্রতিক আয়</h2>
+    <ul class="list" id="w-log"></ul>
+    <button class="btn ghost full" id="reset" style="margin-top:22px">ডেমো রিসেট করুন</button>
+  </section>
+
+  <section id="v-refer" class="view" hidden>
+    <header class="top"><h1>রেফার</h1></header>
+    <div class="wal">
+      <div class="k">বন্ধুকে ডাকুন, দুজনেই পান</div>
+      <div class="hint">আপনার লিংকে কেউ জয়েন করলে আপনি পাবেন <b>৳৫</b>, আর সে পাবে <b>৳৮</b>।</div>
+      <div class="k" style="margin-top:6px">আপনার রেফার কোড</div>
+      <div class="tkbig" id="r-mycode" style="font-size:34px"></div>
+    </div>
+    <h2 class="label">আপনার রেফার লিংক</h2>
+    <div class="field"><label for="r-link">লিংক (ডেমো)</label><input id="r-link" type="text" readonly></div>
+    <button class="btn full" id="r-copy">লিংক কপি করুন</button>
+    <h2 class="label">আপনার রেফার</h2>
+    <dl class="res">
+      <div><dt>জয়েন করেছে</dt><dd id="r-n"></dd></div>
+      <div><dt>রেফার থেকে পেয়েছেন</dt><dd id="r-earn"></dd></div>
+    </dl>
+    <button class="btn ghost full" id="r-demo" style="margin-top:12px">ডেমো: একজন বন্ধু জয়েন করেছে ধরে নিন</button>
+    <h2 class="label">কারও রেফার কোড আছে?</h2>
+    <form id="r-form" novalidate>
+      <div class="field"><label for="r-code">বন্ধুর রেফার কোড (একবারই ব্যবহার করা যাবে)</label>
+        <input id="r-code" type="text" autocomplete="off" maxlength="9" placeholder="TAKA-XXXX"></div>
+      <p class="err" id="r-msg" role="alert"></p>
+      <button class="btn full" type="submit" id="r-use">কোড ব্যবহার করে ৳৮ নিন</button>
+    </form>
+    <p class="note">আসল অ্যাপে নতুন ইউজার ফোন নম্বর ভেরিফাই করলে তবেই দুজনকে টাকা দেওয়া ভালো। নইলে ভুয়া অ্যাকাউন্ট দিয়ে টাকা নেওয়া হতে পারে।</p>
+  </section>
+
+  <section id="v-calc" class="view" hidden>
+    <header class="top"><h1>হিসাব</h1><span class="pill">শুধু আপনার জন্য</span></header>
+    <p class="hint" style="margin:0 0 14px">বিজ্ঞাপন থেকে কত আয় আর ইউজারকে কত দিলে আপনার কত থাকে, এখানে দেখুন। পুরস্কারের অঙ্ক বদলালে ডেমোর কাজেও বদলায়।</p>
+    <div class="field"><label for="c-income">প্রতি বিজ্ঞাপন দেখায় আপনার আয় (৳)</label>
+      <input id="c-income" type="number" inputmode="decimal" min="0" step="0.01">
+      <span class="hint">এটি ধরে নেওয়া সংখ্যা। আসল আয় বিজ্ঞাপন কোম্পানি ও বিজ্ঞাপনের ধরন অনুযায়ী আলাদা হয়।</span></div>
+    <div class="field"><label for="c-reward">১০টি বিজ্ঞাপন দেখলে ইউজার পায় (৳)</label>
+      <input id="c-reward" type="number" inputmode="decimal" min="0" step="0.5"></div>
+    <div class="field"><label for="c-users">প্রতিদিন কতজন ইউজার</label>
+      <input id="c-users" type="number" inputmode="numeric" min="0" step="1"></div>
+    <div class="field"><label for="c-auto">১০টির বাইরে একজন দিনে কয়টি বিজ্ঞাপন দেখে</label>
+      <input id="c-auto" type="number" inputmode="numeric" min="0" step="1">
+      <span class="hint">অ্যাপ খোলা, কাজে ঢোকা ও বের হওয়া, বোনাস নেওয়ার সময় আসা বিজ্ঞাপন।</span></div>
+    <div class="field"><label for="c-other">কুইজ, অঙ্ক, স্নেক ও বোনাসে একজন দিনে গড়ে পায় (৳)</label>
+      <input id="c-other" type="number" inputmode="decimal" min="0" step="0.1"></div>
+    <h2 class="label">ফলাফল</h2>
+    <dl class="res">
+      <div><dt>একজন দিনে মোট বিজ্ঞাপন দেখে</dt><dd id="c-o1"></dd></div>
+      <div><dt>একজনের থেকে দিনে বিজ্ঞাপন আয়</dt><dd id="c-o2"></dd></div>
+      <div><dt>একজনকে দিনে দেওয়া</dt><dd id="c-o3"></dd></div>
+      <div><dt>একজনের থেকে দিনে আপনার থাকে</dt><dd id="c-o4"></dd></div>
+      <div><dt>সব ইউজারে ৩০ দিনে আপনার থাকে</dt><dd id="c-o5"></dd></div>
+      <div><dt>লোকসান না হতে প্রতি বিজ্ঞাপনে আয় লাগবে</dt><dd id="c-o6"></dd></div>
+      <div><dt>প্রতি সফল রেফারে আপনার খরচ (৫ + ৮)</dt><dd id="c-o7"></dd></div>
+      <div><dt>নতুন ইউজারের থেকে এই খরচ ওঠে</dt><dd id="c-o8"></dd></div>
+    </dl>
+    <p class="hint" id="c-warn" style="margin-top:12px"></p>
+    <p class="note">সার্ভার খরচ, পেমেন্ট চার্জ, ভুয়া ইউজার ও ব্যর্থ পেমেন্ট এখানে ধরা হয়নি। এগুলো বাদ দিলে আপনার থাকা অংশ কমবে।</p>
+  </section>
+
+  <section id="v-ad" class="view" hidden>
+    <div class="sub-head"><button class="btn ghost" data-back>← ফিরুন</button><h1 id="ad-title">বিজ্ঞাপন</h1></div>
+    <div class="adslot"><div><span class="adtag">বিজ্ঞাপন · ডেমো</span><b style="margin-top:10px">৩০০×২৫০ বিজ্ঞাপনের জায়গা</b>আসল অ্যাপে এখানে বিজ্ঞাপন কোম্পানির বিজ্ঞাপন দেখা যাবে।</div></div>
+    <div class="adbar">
+      <div class="ring"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="26" fill="none" stroke="var(--surface-2)" stroke-width="7"/><circle id="ad-ring" cx="32" cy="32" r="26" fill="none" stroke="var(--primary)" stroke-width="7" stroke-linecap="round" stroke-dasharray="163.4" stroke-dashoffset="0"/></svg><span id="ad-n">৫</span></div>
+      <button class="btn" id="ad-claim" disabled style="flex:1"></button>
+    </div>
+    <p class="hint">অন্য ট্যাবে বা অ্যাপে গেলে সময় থেমে যায়।</p>
+  </section>
+
+  <section id="v-quiz" class="view" hidden>
+    <div class="sub-head"><button class="btn ghost" data-back>← ফিরুন</button><h1>কুইজ</h1></div>
+    <div id="quiz-body"></div>
+  </section>
+
+  <section id="v-math" class="view" hidden>
+    <div class="sub-head"><button class="btn ghost" data-back>← ফিরুন</button><h1>অঙ্ক</h1></div>
+    <div id="m-body"></div>
+  </section>
+
+  <section id="v-snake" class="view" hidden>
+    <div class="sub-head"><button class="btn ghost" data-back>← ফিরুন</button><h1>স্নেক গেম</h1></div>
+    <div class="meta"><span>খাবার: <b id="s-score">০</b>/১৫</span><span>প্রতি খাবারে ১ পয়েন্ট</span></div>
+    <div class="board">
+      <canvas id="s-canvas" width="480" height="480" aria-label="স্নেক গেমের বোর্ড"></canvas>
+      <div class="ov" id="s-ov"></div>
+    </div>
+    <div class="pad">
+      <button class="btn ghost up" data-d="up" aria-label="উপরে">▲</button>
+      <button class="btn ghost lf" data-d="left" aria-label="বামে">◀</button>
+      <button class="btn ghost dn" data-d="down" aria-label="নিচে">▼</button>
+      <button class="btn ghost rt" data-d="right" aria-label="ডানে">▶</button>
+    </div>
+  </section>
+</div>
+
+<nav id="tabs" aria-label="প্রধান মেনু"><div class="in">
+  <button class="tab" data-go="home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg>হোম</button>
+  <button class="tab" data-go="wallet"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M15 12h6v4h-6a2 2 0 0 1 0-4z"/></svg>ওয়ালেট</button>
+  <button class="tab" data-go="refer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/></svg>রেফার</button>
+  <button class="tab" data-go="calc"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h2M12 12h2M8 16h2M12 16h2"/></svg>হিসাব</button>
+</div></nav>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="ix" hidden>
+  <div class="ix-in">
+    <div class="ix-top"><span class="adtag">বিজ্ঞাপন · ডেমো</span><span class="hint">প্রতিটি বিজ্ঞাপন ৫ সেকেন্ডের</span></div>
+    <div class="adslot"><div><b>পুরো পর্দার বিজ্ঞাপনের জায়গা</b>আসল অ্যাপে এখানে বিজ্ঞাপন কোম্পানির বিজ্ঞাপন আসবে।</div></div>
+    <button class="btn full" id="ix-close" disabled></button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+document.documentElement.lang='bn';
+var KEY='takatask.v3';
+var RATE=100;            // 100 points = 1 taka
+var MAX_TK=200,REF_TK=5,JOIN_TK=8;   // max per withdrawal; referrer bonus; new joiner bonus (taka)
+var MIN_TK=50;           // minimum withdrawal in taka
+var CAPS={ad:10,quiz:3,math:3,snake:3};
+var CHECKIN=[5,5,10,10,15,15,30];
+var BN='০১২৩৪৫৬৭৮৯';
+var $=function(id){return document.getElementById(id)};
+var bn=function(s){return String(s).replace(/\d/g,function(d){return BN[d]})};
+var unbn=function(s){return String(s).replace(/[০-৯]/g,function(c){return BN.indexOf(c)})};
+var fmt=function(n){return bn(Math.round(n).toLocaleString('en-US'))};
+var tk=function(p){return '৳'+bn((p/RATE).toFixed(2))};
+var money=function(n){return '৳'+bn(n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}))};
+var rnd=function(a,b){return a+Math.floor(Math.random()*(b-a+1))};
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=rnd(0,i),t=a[i];a[i]=a[j];a[j]=t}return a}
+function genCode(){var c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',s='TAKA-';for(var i=0;i<4;i++)s+=c[rnd(0,c.length-1)];return s}
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function today(){return ymd(new Date())}
+function dt(ts){var d=new Date(ts),p=function(n){return String(n).padStart(2,'0')};return bn(p(d.getDate())+'/'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes()))}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+
+function defState(){
+  return {points:4700,refCode:genCode(),refs:0,refEarn:0,usedRef:'',streak:2,lastClaim:ymd(new Date(Date.now()-864e5)),day:today(),
+    counts:{ad:0,quiz:0,math:0,snake:0},earnedToday:0,log:[],withdrawals:[],
+    cfg:{adIncome:0.12,reward:5,auto:9,other:0.8,users:500}};
+}
+function load(){
+  try{var s=JSON.parse(localStorage.getItem(KEY));if(s&&typeof s.points==='number'){var r=Object.assign(defState(),s);r.cfg=Object.assign(defState().cfg,s.cfg||{});return r}}catch(e){}
+  return defState();
+}
+var S=load();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function normalize(){
+  var t=today(),y=ymd(new Date(Date.now()-864e5));
+  if(S.day!==t){S.day=t;S.counts={ad:0,quiz:0,math:0,snake:0};S.earnedToday=0}
+  if(S.lastClaim<y){S.streak=0}
+  save();
+}
+normalize();
+
+function left(id){return CAPS[id]-(S.counts[id]||0)}
+function adBonus(){return Math.max(0,Math.round(S.cfg.reward*RATE))}
+
+var tt;
+function toast(m){var t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(function(){t.classList.remove('show')},2200)}
+function addPoints(p,label){
+  S.points+=p;S.earnedToday+=p;S.log.unshift({k:label,p:p,t:Date.now()});S.log=S.log.slice(0,20);save();render();
+  toast('+'+bn(p)+' পয়েন্ট যোগ হয়েছে');
+}
+
+var ICON={
+  ad:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10.5 9.5v5l4-2.5z"/></svg>',
+  quiz:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1.9-1.1 1.8"/><path d="M12 17h.01"/></svg>',
+  math:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h6M7 5v6M14 8h6M14.5 14.5l5 5M19.5 14.5l-5 5M4 16h6M4 19h6"/></svg>',
+  snake:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 18h9a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h8"/><circle cx="19" cy="6" r="1"/></svg>'
+};
+
+/* ---------- render ---------- */
+function renderHome(){
+  $('h-pts').textContent=fmt(S.points);
+  $('h-tk').textContent=tk(S.points);
+  $('h-today').textContent='আজ আয়: +'+fmt(S.earnedToday)+' পয়েন্ট';
+  var claimed=S.lastClaim===today();
+  var idx=claimed?(S.streak-1)%7:S.streak%7;
+  var h='';
+  for(var i=0;i<7;i++){
+    var cls=claimed?(i<=idx?'done':''):(i<idx?'done':(i===idx?'today':''));
+    h+='<div class="day '+cls+'"><span>দিন '+bn(i+1)+'</span><b>'+(cls==='done'?'✓':'+'+bn(CHECKIN[i]))+'</b></div>';
+  }
+  $('days').innerHTML=h;
+  var b=$('claim');
+  b.disabled=claimed;
+  b.textContent=claimed?'আজকের বোনাস নেওয়া হয়েছে, কাল আবার আসুন':'আজকের বোনাস নিন (+'+bn(CHECKIN[idx])+')';
+}
+function renderTasks(){
+  var T=[
+    {id:'ad',t:'১০টি বিজ্ঞাপন দেখে ৳'+bn(S.cfg.reward)+' পান',s:'আজ দেখেছেন '+bn(S.counts.ad)+'/১০ · প্রতিটি ৫ সেকেন্ড',c:'৳'+bn(S.cfg.reward),bar:S.counts.ad/CAPS.ad*100,d:'আজকের ৳'+bn(S.cfg.reward)+' পাওয়া হয়ে গেছে, কাল আবার আসুন'},
+    {id:'quiz',t:'কুইজ',s:'৫টি প্রশ্ন, সঠিক উত্তরে ৩ পয়েন্ট · আজ বাকি '+bn(left('quiz'))+' বার',c:'সর্বোচ্চ ১৫'},
+    {id:'math',t:'অঙ্ক',s:'৫টি যোগ-বিয়োগ, ১৫ সেকেন্ড করে, সঠিক উত্তরে ২ পয়েন্ট · আজ বাকি '+bn(left('math'))+' বার',c:'সর্বোচ্চ ১০'},
+    {id:'snake',t:'স্নেক গেম',s:'প্রতি খাবারে ১ পয়েন্ট · আজ বাকি '+bn(left('snake'))+' বার',c:'সর্বোচ্চ ১৫'}
+  ];
+  $('tasks').innerHTML=T.map(function(x){
+    var done=left(x.id)<=0;
+    return '<button class="task" data-t="'+x.id+'"'+(done?' disabled':'')+'><span class="ic">'+ICON[x.id]+'</span><span><span class="t">'+x.t+'</span><br><span class="s">'+(done?(x.d||'আজকের সীমা শেষ, কাল আবার আসুন'):x.s)+'</span>'+(x.bar!==undefined?'<span class="bar mini"><i style="width:'+x.bar+'%"></i></span>':'')+'</span><span class="chip">'+x.c+'</span></button>';
+  }).join('');
+}
+function renderWallet(){
+  $('w-tk').textContent=tk(S.points);
+  $('w-pts').textContent=fmt(S.points);
+  var need=MIN_TK*RATE;
+  $('w-bar').style.width=Math.min(100,S.points/need*100)+'%';
+  $('w-hint').textContent=S.points>=need?'আপনি এখনই টাকা তুলতে পারবেন।':'আর '+fmt(need-S.points)+' পয়েন্ট হলে ৳'+bn(MIN_TK)+' তুলতে পারবেন।';
+  $('w-req').innerHTML=S.withdrawals.length?S.withdrawals.map(function(w){
+    var n=w.num;
+    return '<li><span>'+esc(w.method)+' · '+bn(esc(n.slice(0,3)+'*****'+n.slice(-3)))+'<br><span class="d">'+dt(w.t)+'</span></span><span style="text-align:right"><span class="a">৳'+bn(w.tk)+'</span><br><span class="tag">অপেক্ষমাণ (ডেমো)</span></span></li>';
+  }).join(''):'<li class="empty">এখনো কোনো অনুরোধ নেই।</li>';
+  $('w-log').innerHTML=S.log.length?S.log.map(function(l){
+    return '<li><span>'+esc(l.k)+'<br><span class="d">'+dt(l.t)+'</span></span><span class="a">+'+bn(l.p)+'</span></li>';
+  }).join(''):'<li class="empty">কাজ করলে এখানে আয় দেখা যাবে।</li>';
+}
+function render(){renderHome();renderTasks();renderWallet();renderRefer();calc()}
+
+/* ---------- navigation ---------- */
+var VIEWS=['home','wallet','refer','calc','ad','quiz','math','snake'];
+var cur='home';
+var taskAdDone=false;
+function go(v){
+  cur=v;
+  VIEWS.forEach(function(x){$('v-'+x).hidden=x!==v});
+  var main=v==='home'||v==='wallet'||v==='refer'||v==='calc';
+  $('tabs').hidden=!main;
+  document.querySelectorAll('.tab').forEach(function(b){b.setAttribute('aria-current',b.dataset.go===v?'page':'false')});
+  window.scrollTo(0,0);
+}
+function stopAll(){
+  if(ad&&ad.timer)clearInterval(ad.timer);
+  if(mth&&mth.timer)clearInterval(mth.timer);
+  if(snk.run){snakeEnd(true)}else{clearInterval(snk.timer)}
+}
+document.addEventListener('click',function(e){
+  var g=e.target.closest('[data-go]');
+  if(g){stopAll();go(g.dataset.go);render();return}
+  if(e.target.closest('[data-back]')){
+    stopAll();
+    var inTask=cur==='quiz'||cur==='math'||cur==='snake';
+    var out=function(){go('home');render()};
+    if(inTask&&!taskAdDone){taskAdDone=true;interstitial(out)}else{out()}
+  }
+});
+
+/* ---------- full-screen ads (demo) ---------- */
+var ix=null;
+function drawIx(){
+  var b=$('ix-close');b.disabled=ix.t>0;
+  b.textContent=ix.t>0?bn(ix.t)+' সেকেন্ড পরে বন্ধ করা যাবে':'বিজ্ঞাপন বন্ধ করুন';
+}
+function interstitial(then){
+  if(ix&&ix.timer)clearInterval(ix.timer);
+  ix={t:5,then:then,timer:0};
+  $('ix').hidden=false;drawIx();
+  ix.timer=setInterval(function(){
+    if(document.hidden)return;
+    ix.t--;drawIx();if(ix.t<=0)clearInterval(ix.timer);
+  },1000);
+}
+$('ix-close').addEventListener('click',function(){
+  if(!ix||ix.t>0)return;
+  $('ix').hidden=true;
+  var f=ix.then;ix=null;
+  if(f)f();
+});
+
+/* ---------- daily bonus ---------- */
+$('claim').addEventListener('click',function(){
+  if(S.lastClaim===today())return;
+  interstitial(function(){
+    if(S.lastClaim===today())return;
+    var idx=S.streak%7,p=CHECKIN[idx];
+    S.streak++;S.lastClaim=today();
+    addPoints(p,'দৈনিক বোনাস');
+  });
+});
+$('tasks').addEventListener('click',function(e){
+  var b=e.target.closest('[data-t]');if(!b||b.disabled)return;
+  ({ad:startAd,quiz:startQuiz,math:startMath,snake:startSnake})[b.dataset.t]();
+});
+
+/* ---------- ad ---------- */
+var ad=null;
+function drawAd(){
+  $('ad-n').textContent=bn(ad.t);
+  $('ad-ring').setAttribute('stroke-dashoffset',String(163.4*(1-(5-ad.t)/5)));
+  var b=$('ad-claim');b.disabled=ad.t>0;
+  b.textContent=ad.t>0?bn(ad.t)+' সেকেন্ড অপেক্ষা করুন':'চালিয়ে যান';
+}
+function startAd(){
+  if(left('ad')<=0)return;
+  ad={t:5};$('ad-title').textContent='বিজ্ঞাপন '+bn(S.counts.ad+1)+'/১০';go('ad');drawAd();
+  ad.timer=setInterval(function(){
+    if(document.hidden)return;
+    ad.t--;drawAd();if(ad.t<=0)clearInterval(ad.timer);
+  },1000);
+}
+$('ad-claim').addEventListener('click',function(){
+  if(!ad||ad.t>0)return;
+  S.counts.ad++;save();
+  if(S.counts.ad>=CAPS.ad){addPoints(adBonus(),'১০টি বিজ্ঞাপনের পুরস্কার')}else{render();toast('বিজ্ঞাপন '+bn(S.counts.ad)+'/১০ হয়েছে')}
+  go('home');
+});
+
+/* ---------- quiz ---------- */
+var QZ=[
+  {q:'বাংলাদেশের রাজধানীর নাম কী?',o:['ঢাকা','চট্টগ্রাম','খুলনা','সিলেট'],a:0},
+  {q:'বাংলাদেশের জাতীয় ফুল কোনটি?',o:['গোলাপ','শাপলা','বেলি','গাঁদা'],a:1},
+  {q:'বাংলাদেশের জাতীয় পাখি কোনটি?',o:['দোয়েল','কোকিল','ময়না','শালিক'],a:0},
+  {q:'বাংলাদেশের জাতীয় ফল কোনটি?',o:['আম','কাঁঠাল','লিচু','কলা'],a:1},
+  {q:'বাংলাদেশের জাতীয় পশু কোনটি?',o:['হাতি','হরিণ','রয়েল বেঙ্গল টাইগার','গরু'],a:2},
+  {q:'বাংলাদেশ কত সালে স্বাধীন হয়?',o:['১৯৪৭','১৯৫২','১৯৭১','১৯৭৫'],a:2},
+  {q:'আন্তর্জাতিক মাতৃভাষা দিবস কোন তারিখে?',o:['২৬ মার্চ','১৬ ডিসেম্বর','২১ ফেব্রুয়ারি','১৪ এপ্রিল'],a:2},
+  {q:'বিশ্বের বৃহত্তম ম্যানগ্রোভ বন কোনটি?',o:['সুন্দরবন','লাউয়াছড়া','মধুপুর','রাতারগুল'],a:0},
+  {q:'বাংলাদেশের মুদ্রার নাম কী?',o:['রুপি','টাকা','ডলার','রিয়াল'],a:1},
+  {q:'কক্সবাজার কীসের জন্য বিখ্যাত?',o:['দীর্ঘ সমুদ্রসৈকত','উঁচু পাহাড়','মরুভূমি','বরফের নদী'],a:0},
+  {q:'পানির রাসায়নিক সংকেত কোনটি?',o:['CO₂','O₂','H₂O','NaCl'],a:2},
+  {q:'পৃথিবীর সবচেয়ে বড় মহাসাগর কোনটি?',o:['আটলান্টিক','প্রশান্ত','ভারত','আর্কটিক'],a:1},
+  {q:'সূর্য কোন দিকে ওঠে?',o:['পশ্চিম','উত্তর','দক্ষিণ','পূর্ব'],a:3},
+  {q:'এক বছরে কয়টি মাস?',o:['১০','১১','১২','১৩'],a:2}
+];
+var quiz=null;
+function startQuiz(){
+  if(left('quiz')<=0)return;
+  interstitial(beginQuiz);
+}
+function beginQuiz(){
+  if(left('quiz')<=0)return;
+  taskAdDone=false;
+  S.counts.quiz++;save();renderTasks();
+  var qs=shuffle(QZ.slice()).slice(0,5).map(function(x){
+    return {q:x.q,o:shuffle(x.o.map(function(t,i){return {t:t,c:i===x.a}}))};
+  });
+  quiz={qs:qs,i:0,ok:0,answered:false};
+  go('quiz');showQ();
+}
+function showQ(){
+  var x=quiz.qs[quiz.i];quiz.answered=false;
+  $('quiz-body').innerHTML='<div class="meta"><span>প্রশ্ন '+bn(quiz.i+1)+'/৫</span><span>সঠিক: '+bn(quiz.ok)+'</span></div>'+
+    '<div class="bar"><i style="width:'+(quiz.i/5*100)+'%"></i></div>'+
+    '<div class="q">'+esc(x.q)+'</div>'+
+    x.o.map(function(o,i){return '<button class="opt" data-i="'+i+'"><span>'+esc(o.t)+'</span><span class="m"></span></button>'}).join('')+
+    '<div id="q-after"></div>';
+}
+$('quiz-body').addEventListener('click',function(e){
+  var nx=e.target.closest('[data-next]');
+  if(nx){
+    if(quiz.i<4){quiz.i++;showQ()}else{taskAdDone=true;interstitial(finishQuiz)}
+    return;
+  }
+  var b=e.target.closest('.opt');if(!b||quiz.answered)return;
+  quiz.answered=true;
+  var x=quiz.qs[quiz.i],pick=+b.dataset.i,ok=x.o[pick].c;
+  if(ok)quiz.ok++;
+  document.querySelectorAll('#quiz-body .opt').forEach(function(el,i){
+    el.disabled=true;
+    if(x.o[i].c){el.classList.add('right');el.querySelector('.m').textContent='✓ সঠিক'}
+    else if(i===pick){el.classList.add('wrong');el.querySelector('.m').textContent='✗ ভুল'}
+  });
+  $('q-after').innerHTML='<p class="fb '+(ok?'good':'bad')+'">'+(ok?'সঠিক উত্তর, +৩ পয়েন্ট':'এবার হলো না')+'</p><button class="btn full" data-next>'+(quiz.i<4?'পরের প্রশ্ন':'ফলাফল দেখুন')+'</button>';
+});
+function finishQuiz(){
+  var p=quiz.ok*3;
+  $('quiz-body').innerHTML='<div class="result"><div class="hint">৫টির মধ্যে সঠিক</div><div class="big">'+bn(quiz.ok)+'টি</div><p>'+(p>0?'+'+bn(p)+' পয়েন্ট যোগ হয়েছে':'এবার কোনো পয়েন্ট পাননি')+'</p><button class="btn full" data-back>হোমে ফিরুন</button></div>';
+  if(p>0)addPoints(p,'কুইজ');
+}
+
+/* ---------- maths ---------- */
+var mth=null;
+function genMath(){
+  var t=rnd(0,1),a,b,op,ans;
+  if(t===0){a=rnd(5,49);b=rnd(5,40);op='+';ans=a+b}
+  else{a=rnd(15,60);b=rnd(3,Math.min(40,a-3));op='−';ans=a-b}
+  return {text:bn(a)+' '+op+' '+bn(b),ans:ans};
+}
+function startMath(){
+  if(left('math')<=0)return;
+  interstitial(beginMath);
+}
+function beginMath(){
+  if(left('math')<=0)return;
+  taskAdDone=false;
+  S.counts.math++;save();renderTasks();
+  mth={i:0,ok:0,cur:null,t:15,timer:0,answered:false};
+  go('math');showM();
+}
+function showM(){
+  mth.cur=genMath();mth.t=15;mth.answered=false;
+  $('m-body').innerHTML='<div class="meta"><span>প্রশ্ন '+bn(mth.i+1)+'/৫</span><span>সঠিক: '+bn(mth.ok)+'</span></div>'+
+    '<div class="bar"><i id="m-bar" style="width:100%;transition:none"></i></div>'+
+    '<div class="mexp">'+mth.cur.text+' = ?</div>'+
+    '<form id="m-form" novalidate><label class="hint" for="m-in">উত্তর লিখুন</label><input class="ans" id="m-in" type="text" inputmode="numeric" autocomplete="off"><button class="btn full" type="submit">জমা দিন</button></form>'+
+    '<div id="m-after"></div>';
+  var el=$('m-in');if(el)el.focus();
+  clearInterval(mth.timer);
+  mth.timer=setInterval(function(){
+    if(document.hidden||mth.answered)return;
+    mth.t-=0.1;
+    var bar=$('m-bar');if(bar)bar.style.width=Math.max(0,mth.t/15*100)+'%';
+    if(mth.t<=0)submitM(null,true);
+  },100);
+}
+function submitM(v,timeout){
+  if(mth.answered)return;
+  var n=NaN;
+  if(!timeout){n=parseInt(unbn(v).trim(),10);if(isNaN(n))return}
+  mth.answered=true;clearInterval(mth.timer);
+  var ok=!timeout&&n===mth.cur.ans;
+  if(ok)mth.ok++;
+  var inp=$('m-in');if(inp)inp.disabled=true;
+  var sb=document.querySelector('#m-form button');if(sb)sb.disabled=true;
+  var msg=ok?'সঠিক ✓ +২ পয়েন্ট':(timeout?'সময় শেষ। সঠিক উত্তর '+bn(mth.cur.ans):'ভুল ✗ সঠিক উত্তর '+bn(mth.cur.ans));
+  $('m-after').innerHTML='<p class="fb '+(ok?'good':'bad')+'">'+msg+'</p><button class="btn full" data-next>'+(mth.i<4?'পরের অঙ্ক':'ফলাফল দেখুন')+'</button>';
+}
+$('m-body').addEventListener('submit',function(e){e.preventDefault();submitM($('m-in').value,false)});
+$('m-body').addEventListener('click',function(e){
+  if(e.target.closest('[data-next]')){
+    if(mth.i<4){mth.i++;showM()}else{taskAdDone=true;interstitial(finishMath)}
+  }
+});
+function finishMath(){
+  var p=mth.ok*2;
+  $('m-body').innerHTML='<div class="result"><div class="hint">৫টির মধ্যে সঠিক</div><div class="big">'+bn(mth.ok)+'টি</div><p>'+(p>0?'+'+bn(p)+' পয়েন্ট যোগ হয়েছে':'এবার কোনো পয়েন্ট পাননি')+'</p><button class="btn full" data-back>হোমে ফিরুন</button></div>';
+  if(p>0)addPoints(p,'অঙ্ক');
+}
+
+/* ---------- snake ---------- */
+var G=16,SMAX=15;
+var snk={run:false,timer:0,body:[],dir:[1,0],next:[1,0],food:null,score:0};
+function startSnake(){
+  if(left('snake')<=0)return;
+  interstitial(beginSnake);
+}
+function beginSnake(){
+  taskAdDone=false;
+  go('snake');snakeReset();
+  showOv('<b>প্রস্তুত?</b><span class="hint">সোয়াইপ করুন বা নিচের বোতাম চাপুন। দেয়াল বা নিজের গায়ে লাগলে খেলা শেষ।</span><button class="btn" data-act="start">শুরু করুন</button>');
+}
+function showOv(h){var o=$('s-ov');o.hidden=false;o.innerHTML='<div class="panel">'+h+'</div>'}
+function snakeReset(){
+  snk.body=[[8,8],[7,8],[6,8]];snk.dir=[1,0];snk.next=[1,0];snk.score=0;placeFood();updScore();drawSnake();
+}
+function placeFood(){
+  var f;
+  do{f=[rnd(0,G-1),rnd(0,G-1)]}while(snk.body.some(function(s){return s[0]===f[0]&&s[1]===f[1]}));
+  snk.food=f;
+}
+function updScore(){$('s-score').textContent=bn(snk.score)}
+function snakeBegin(){
+  if(left('snake')<=0)return;
+  S.counts.snake++;save();renderTasks();
+  taskAdDone=false;$('s-ov').hidden=true;snakeReset();snk.run=true;
+  clearInterval(snk.timer);snk.timer=setInterval(snakeStep,130);
+}
+function snakeStep(){
+  if(document.hidden)return;
+  snk.dir=snk.next;
+  var h=[snk.body[0][0]+snk.dir[0],snk.body[0][1]+snk.dir[1]];
+  if(h[0]<0||h[1]<0||h[0]>=G||h[1]>=G||snk.body.some(function(s){return s[0]===h[0]&&s[1]===h[1]})){return snakeEnd(false)}
+  snk.body.unshift(h);
+  if(h[0]===snk.food[0]&&h[1]===snk.food[1]){
+    snk.score++;updScore();
+    if(snk.score>=SMAX){drawSnake();return snakeEnd(false,true)}
+    placeFood();
+  }else{snk.body.pop()}
+  drawSnake();
+}
+function snakeEnd(silent,maxed){
+  clearInterval(snk.timer);
+  if(!snk.run)return;
+  snk.run=false;
+  var p=Math.min(SMAX,snk.score);
+  if(p>0)addPoints(p,'স্নেক গেম');
+  if(silent)return;
+  var again=left('snake')>0;
+  taskAdDone=true;
+  interstitial(function(){showOv('<b>'+(maxed?'সর্বোচ্চ পয়েন্ট পেয়েছেন!':'খেলা শেষ')+'</b><span>'+(p>0?'+'+bn(p)+' পয়েন্ট যোগ হয়েছে':'এবার কোনো পয়েন্ট পাননি')+'</span>'+
+    (again?'<button class="btn" data-act="start">আবার খেলুন (আজ বাকি '+bn(left('snake'))+' বার)</button>':'<span class="hint">আজকের সীমা শেষ, কাল আবার আসুন।</span>')+
+    '<button class="btn ghost" data-back>হোমে ফিরুন</button>')});
+}
+$('s-ov').addEventListener('click',function(e){if(e.target.closest('[data-act="start"]'))snakeBegin()});
+function setDir(dx,dy){
+  if(!snk.run)return;
+  if(dx===-snk.dir[0]&&dy===-snk.dir[1])return;
+  snk.next=[dx,dy];
+}
+var DIRS={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
+document.querySelectorAll('[data-d]').forEach(function(b){
+  b.addEventListener('click',function(){var d=DIRS[b.dataset.d];setDir(d[0],d[1])});
+});
+document.addEventListener('keydown',function(e){
+  if(cur!=='snake')return;
+  var m={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right'}[e.key];
+  if(m){e.preventDefault();var d=DIRS[m];setDir(d[0],d[1])}
+});
+var tx=0,ty=0;
+$('s-canvas').addEventListener('touchstart',function(e){var t=e.touches[0];tx=t.clientX;ty=t.clientY},{passive:true});
+$('s-canvas').addEventListener('touchend',function(e){
+  var t=e.changedTouches[0],dx=t.clientX-tx,dy=t.clientY-ty;
+  if(Math.max(Math.abs(dx),Math.abs(dy))<24)return;
+  if(Math.abs(dx)>Math.abs(dy)){setDir(dx>0?1:-1,0)}else{setDir(0,dy>0?1:-1)}
+},{passive:true});
+function rr(x,a,b,w,h,r){
+  x.beginPath();
+  if(x.roundRect){x.roundRect(a,b,w,h,r)}else{x.rect(a,b,w,h)}
+  x.fill();
+}
+function drawSnake(){
+  var c=$('s-canvas'),x=c.getContext('2d'),W=c.width,u=W/G;
+  var cs=getComputedStyle(document.documentElement);
+  var col=function(n){return cs.getPropertyValue(n).trim()};
+  x.fillStyle=col('--surface-2');x.fillRect(0,0,W,W);
+  x.fillStyle=col('--line');x.globalAlpha=.45;
+  for(var i=0;i<G;i++)for(var j=0;j<G;j++){if((i+j)%2===0)x.fillRect(i*u,j*u,u,u)}
+  x.globalAlpha=1;
+  var f=snk.food;
+  x.fillStyle=col('--coin');x.beginPath();x.arc((f[0]+.5)*u,(f[1]+.5)*u,u*.38,0,Math.PI*2);x.fill();
+  x.strokeStyle=col('--on-coin');x.globalAlpha=.45;x.lineWidth=2;x.beginPath();x.arc((f[0]+.5)*u,(f[1]+.5)*u,u*.22,0,Math.PI*2);x.stroke();x.globalAlpha=1;
+  snk.body.forEach(function(s,i){
+    x.fillStyle=col('--primary');x.globalAlpha=i===0?1:.78;
+    rr(x,s[0]*u+2,s[1]*u+2,u-4,u-4,8);
+  });
+  x.globalAlpha=1;
+  var hd=snk.body[0];x.fillStyle=col('--on-primary');
+  x.beginPath();x.arc((hd[0]+.5)*u+snk.dir[0]*u*.12,(hd[1]+.5)*u+snk.dir[1]*u*.12,u*.1,0,Math.PI*2);x.fill();
+}
+
+/* ---------- wallet ---------- */
+$('w-form').addEventListener('submit',function(e){
+  e.preventDefault();
+  var msg=$('w-msg');msg.className='err';
+  var num=unbn($('w-num').value).replace(/\s|-/g,'');
+  var amt=parseInt(unbn($('w-amt').value),10);
+  if(!/^01[3-9]\d{8}$/.test(num)){msg.textContent='নম্বর ঠিক নেই। ১১ সংখ্যার মোবাইল নম্বর দিন।';return}
+  if(isNaN(amt)||amt<MIN_TK){msg.textContent='সর্বনিম্ন ৳'+bn(MIN_TK)+' তুলতে পারবেন।';return}
+  if(amt>MAX_TK){msg.textContent='একবারে সর্বোচ্চ ৳'+bn(MAX_TK)+' তুলতে পারবেন।';return}
+  if(amt*RATE>S.points){msg.textContent='ব্যালেন্সে এত পয়েন্ট নেই। আপনার আছে '+tk(S.points)+'।';return}
+  S.points-=amt*RATE;
+  S.withdrawals.unshift({tk:amt,method:$('w-method').value,num:num,t:Date.now()});
+  S.withdrawals=S.withdrawals.slice(0,10);
+  save();render();
+  msg.className='err ok';msg.textContent='অনুরোধ জমা হয়েছে। এটি ডেমো, আসল টাকা পাঠানো হয়নি।';
+});
+var rst=0;
+$('reset').addEventListener('click',function(){
+  var b=$('reset');
+  if(!rst){b.textContent='সব মুছে ফেলতে আবার চাপুন';rst=setTimeout(function(){rst=0;b.textContent='ডেমো রিসেট করুন'},3000);return}
+  clearTimeout(rst);rst=0;b.textContent='ডেমো রিসেট করুন';
+  S=defState();save();initCalc();render();$('w-msg').textContent='';
+});
+
+/* ---------- refer ---------- */
+function renderRefer(){
+  $('r-mycode').textContent=S.refCode;
+  $('r-link').value='https://taskapp.example/join/'+S.refCode;
+  $('r-n').textContent=bn(S.refs)+' জন';
+  $('r-earn').textContent=tk(S.refEarn);
+  $('r-use').disabled=!!S.usedRef;
+  if(S.usedRef){var m=$('r-msg');m.className='err ok';m.textContent='আপনি '+S.usedRef+' কোড ব্যবহার করেছেন।'}
+}
+$('r-copy').addEventListener('click',function(){
+  var el=$('r-link');
+  var fb=function(){el.focus();el.select();try{el.setSelectionRange(0,999)}catch(e){}toast('লিংক বেছে নেওয়া হয়েছে, কপি করুন')};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(el.value).then(function(){toast('লিংক কপি হয়েছে')},fb);
+  }else{fb()}
+});
+$('r-demo').addEventListener('click',function(){
+  S.refs++;S.refEarn+=REF_TK*RATE;
+  addPoints(REF_TK*RATE,'রেফার বোনাস');
+});
+$('r-form').addEventListener('submit',function(e){
+  e.preventDefault();
+  var m=$('r-msg');m.className='err';
+  var c=$('r-code').value.trim().toUpperCase();
+  if(S.usedRef){m.textContent='আপনি আগেই একটি কোড ব্যবহার করেছেন।';return}
+  if(c===S.refCode){m.textContent='নিজের কোড নিজে ব্যবহার করা যাবে না।';return}
+  if(!/^TAKA-[A-Z0-9]{4}$/.test(c)){m.textContent='কোড ঠিক নেই। এভাবে লিখুন: TAKA-XXXX';return}
+  S.usedRef=c;save();
+  addPoints(JOIN_TK*RATE,'জয়েন বোনাস');
+  m.className='err ok';m.textContent='কোড নেওয়া হয়েছে, ৳'+bn(JOIN_TK)+' যোগ হয়েছে। এটি ডেমো।';
+});
+
+/* ---------- owner calculator ---------- */
+function initCalc(){
+  $('c-income').value=S.cfg.adIncome;$('c-reward').value=S.cfg.reward;
+  $('c-auto').value=S.cfg.auto;$('c-other').value=S.cfg.other;$('c-users').value=S.cfg.users;
+}
+function calc(){
+  var g=function(id){return Math.max(0,parseFloat(unbn($(id).value))||0)};
+  var inc=g('c-income'),rw=g('c-reward'),au=g('c-auto'),ot=g('c-other'),us=g('c-users');
+  S.cfg={adIncome:inc,reward:rw,auto:au,other:ot,users:us};save();
+  var total=CAPS.ad+au,earn=inc*total,give=rw+ot,net=earn-give,need=give/total;
+  $('c-o1').textContent=bn(Math.round(total*10)/10)+'টি';
+  $('c-o2').textContent=money(earn);
+  $('c-o3').textContent=money(give);
+  var o4=$('c-o4'),o5=$('c-o5');
+  o4.textContent=money(net);o5.textContent=money(net*us*30);
+  o4.className=o5.className=net<0?'neg':'';
+  $('c-o6').textContent=money(need);
+  $('c-o7').textContent=money(REF_TK+JOIN_TK);
+  $('c-o8').textContent=net>0?bn(Math.ceil((REF_TK+JOIN_TK)/net))+' দিনে':'ওঠে না (লোকসান)';
+  var w=$('c-warn');
+  if(net<0){w.textContent='এই হিসাবে প্রতি ইউজারে লোকসান হচ্ছে। প্রতি বিজ্ঞাপনে অন্তত '+money(need)+' আয় না হলে এই পুরস্কার চালানো যাবে না।'}
+  else{w.textContent='এই হিসাবে প্রতি ইউজারে আপনার থাকে '+money(net)+'।'}
+  renderTasks();
+}
+['c-income','c-reward','c-auto','c-other','c-users'].forEach(function(id){$(id).addEventListener('input',calc)});
+
+initCalc();render();go('home');interstitial(function(){});
+})();
+</script>
+
+</body>
+</html>
